@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>九宫格喝酒游戏</title>
+    <style>
+      :root {
+        --felt: #16614f;
+        --paper: #fff9ed;
+        --ink: #1d2724;
+        --muted: #62716d;
+        --accent: #d7b35a;
+        --danger: #b23838;
+        --shadow: 0 18px 45px rgba(3, 18, 16, 0.28);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(140deg, #0a2b29 0%, #176952 52%, #092622 100%);
+      }
+
+      button, input { font: inherit; }
+
+      button {
+        border: 0;
+        border-radius: 8px;
+        min-height: 44px;
+        padding: 0 18px;
+        color: #17201d;
+        background: var(--accent);
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 5px 0 rgba(73, 54, 16, 0.42);
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .app {
+        width: min(1120px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 26px 0 34px;
+      }
+
+      .topbar, .setup, .game-panel {
+        background: rgba(255, 249, 237, 0.94);
+        border: 1px solid rgba(255, 255, 255, 0.42);
+        box-shadow: var(--shadow);
+        border-radius: 8px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: center;
+        padding: 22px;
+      }
+
+      .top-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      #clearScoresBtn, #passBtn {
+        background: #f2efe6;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: clamp(28px, 4vw, 48px);
+        letter-spacing: 0;
+      }
+
+      p { margin: 0; }
+
+      #statusText {
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .setup {
+        margin-top: 14px;
+        padding: 18px 22px;
+      }
+
+      .setup label, .label {
+        display: block;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .setup-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      input {
+        width: 100%;
+        min-height: 44px;
+        border: 2px solid rgba(29, 39, 36, 0.15);
+        border-radius: 8px;
+        padding: 0 14px;
+        background: white;
+        color: var(--ink);
+        outline: 0;
+      }
+
+      input:focus { border-color: var(--accent); }
+
+      .player-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 40px;
+        margin-top: 12px;
+      }
+
+      .empty-player {
+        color: var(--muted);
+        line-height: 34px;
+      }
+
+      .player-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 34px;
+        max-width: 260px;
+        padding: 0 8px 0 12px;
+        border-radius: 999px;
+        background: #eef4ef;
+        color: #20342f;
+        font-weight: 800;
+      }
+
+      .player-chip.current { background: var(--accent); }
+
+      .player-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .drink-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex: 0 0 auto;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(20, 35, 31, 0.12);
+        font-size: 13px;
+      }
+
+      .drink-cups {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 3px;
+      }
+
+      .cup {
+        position: relative;
+        display: inline-block;
+        width: 12px;
+        height: 15px;
+        border: 2px solid #20342f;
+        border-top: 0;
+        border-radius: 0 0 4px 4px;
+        background: rgba(215, 179, 90, 0.48);
+      }
+
+      .cup::after {
+        content: "";
+        position: absolute;
+        right: -6px;
+        top: 3px;
+        width: 5px;
+        height: 7px;
+        border: 2px solid #20342f;
+        border-left: 0;
+        border-radius: 0 5px 5px 0;
+      }
+
+      .sip {
+        display: inline-block;
+        width: 5px;
+        height: 11px;
+        border-radius: 999px;
+        background: #20342f;
+        opacity: 0.38;
+      }
+
+      .remove-player {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        min-height: 24px;
+        height: 24px;
+        padding: 0;
+        border-radius: 999px;
+        box-shadow: none;
+        background: rgba(20, 35, 31, 0.12);
+        color: #20342f;
+        line-height: 1;
+      }
+
+      .game-panel {
+        display: grid;
+        grid-template-columns: 290px 1fr;
+        gap: 22px;
+        margin-top: 14px;
+        padding: 22px;
+      }
+
+      .turn-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .turn-panel strong {
+        font-size: 26px;
+        line-height: 1.2;
+        word-break: break-word;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      #passBtn { grid-column: 1 / -1; }
+
+      .result {
+        min-height: 78px;
+        padding: 14px;
+        border-radius: 8px;
+        background: rgba(22, 97, 79, 0.08);
+        color: #24423b;
+        line-height: 1.5;
+      }
+
+      .result.miss {
+        background: rgba(178, 56, 56, 0.12);
+        color: var(--danger);
+        font-weight: 800;
+      }
+
+      .result.hit {
+        background: rgba(22, 97, 79, 0.12);
+        color: var(--felt);
+        font-weight: 800;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        background: #f3f3f1;
+        padding: 10px;
+        border-radius: 8px;
+      }
+
+      .board-area {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .deck-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 48px;
+        padding: 0 14px;
+        border: 1px solid #d4d1c9;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #20342f;
+        font-weight: 800;
+      }
+
+      .deck-status span {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .deck-status strong {
+        font-size: 18px;
+        text-align: right;
+      }
+
+      .slot {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: clamp(150px, 25vw, 295px);
+        border: 1px solid #bdbdb8;
+        border-radius: 8px;
+        background: #ffffff;
+        cursor: pointer;
+        box-shadow: none;
+      }
+
+      .slot.selected {
+        outline: 3px solid var(--accent);
+        outline-offset: -4px;
+        border-color: var(--accent);
+      }
+
+      .card {
+        display: grid;
+        justify-items: center;
+        gap: 8px;
+        color: #111111;
+      }
+
+      .card.red { color: #df5630; }
+
+      .card.bomb-card {
+        width: min(100%, 100px);
+        aspect-ratio: 0.72;
+        place-items: center;
+        border-radius: 8px;
+        background: #e9493d;
+        color: #111111;
+      }
+
+      .bomb-icon {
+        position: relative;
+        display: block;
+        width: clamp(34px, 5vw, 58px);
+        height: clamp(34px, 5vw, 58px);
+        border-radius: 50%;
+        background: #111111;
+      }
+
+      .bomb-icon::before {
+        content: "";
+        position: absolute;
+        right: 2px;
+        top: -10px;
+        width: 16px;
+        height: 12px;
+        border-top: 4px solid #111111;
+        border-right: 4px solid #111111;
+        border-radius: 0 10px 0 0;
+        rotate: -18deg;
+      }
+
+      .bomb-icon::after {
+        content: "";
+        position: absolute;
+        right: -3px;
+        top: -15px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #111111;
+      }
+
+      .rank {
+        font-size: clamp(28px, 5vw, 58px);
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .card-suit {
+        font-size: clamp(20px, 3vw, 34px);
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .pile {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        min-width: 30px;
+        height: 30px;
+        padding: 0 8px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: #14231f;
+        color: var(--paper);
+        font-weight: 900;
+      }
+
+      @media (max-width: 760px) {
+        .topbar, .game-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .top-actions {
+          justify-content: stretch;
+        }
+
+        .top-actions button {
+          flex: 1;
+        }
+
+        .game-panel {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .setup-row {
+          grid-template-columns: 1fr;
+        }
+
+        .grid {
+          gap: 8px;
+          padding: 8px;
+        }
+
+        .deck-status {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 10px 12px;
+        }
+
+        .slot { min-height: 132px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="topbar" aria-label="游戏控制">
+        <div>
+          <h1>九宫格喝酒游戏</h1>
+          <p id="statusText">先添加玩家，然后开始游戏。</p>
+        </div>
+        <div class="top-actions">
+          <button id="newGameBtn" type="button">重新开局</button>
+          <button id="clearScoresBtn" type="button">清空记录</button>
+        </div>
+      </section>
+
+      <section class="setup" id="setupPanel" aria-label="玩家设置">
+        <label for="playerInput">玩家</label>
+        <div class="setup-row">
+          <input id="playerInput" type="text" placeholder="输入名字，按 Enter 添加" />
+          <button id="addPlayerBtn" type="button">添加</button>
+          <button id="startBtn" type="button">开始</button>
+        </div>
+        <div class="player-list" id="playerList" aria-label="玩家列表"></div>
+      </section>
+
+      <section class="game-panel" aria-label="游戏区">
+        <aside class="turn-panel">
+          <span class="label">当前玩家</span>
+          <strong id="currentPlayer">未开始</strong>
+          <span class="label">已选格子</span>
+          <strong id="selectedInfo">请选择一格</strong>
+          <div class="actions">
+            <button id="higherBtn" type="button" disabled>猜大</button>
+            <button id="lowerBtn" type="button" disabled>猜小</button>
+            <button id="passBtn" type="button" disabled>Pass</button>
+          </div>
+          <p id="resultText" class="result">猜中可以继续玩，也可以 Pass 交给下一位。</p>
+        </aside>
+        <div class="board-area">
+          <div class="deck-status" aria-label="牌堆数量">
+            <span>牌堆</span>
+            <strong id="deckCount">剩余牌 53/53 · 普通牌 52 · 炸弹未出</strong>
+          </div>
+          <div class="grid" id="cardGrid" aria-label="九宫格扑克牌"></div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const ranks = [
+        { label: "A", value: 1 },
+        { label: "2", value: 2 },
+        { label: "3", value: 3 },
+        { label: "4", value: 4 },
+        { label: "5", value: 5 },
+        { label: "6", value: 6 },
+        { label: "7", value: 7 },
+        { label: "8", value: 8 },
+        { label: "9", value: 9 },
+        { label: "10", value: 10 },
+        { label: "J", value: 11 },
+        { label: "Q", value: 12 },
+        { label: "K", value: 13 },
+      ];
+
+      const suits = [
+        { mark: "♠", red: false },
+        { mark: "♥", red: true },
+        { mark: "♦", red: true },
+        { mark: "♣", red: false },
+      ];
+
+      const cardGrid = document.querySelector("#cardGrid");
+      const addPlayerBtn = document.querySelector("#addPlayerBtn");
+      const startBtn = document.querySelector("#startBtn");
+      const newGameBtn = document.querySelector("#newGameBtn");
+      const clearScoresBtn = document.querySelector("#clearScoresBtn");
+      const playerInput = document.querySelector("#playerInput");
+      const playerList = document.querySelector("#playerList");
+      const currentPlayerEl = document.querySelector("#currentPlayer");
+      const selectedInfoEl = document.querySelector("#selectedInfo");
+      const statusText = document.querySelector("#statusText");
+      const resultText = document.querySelector("#resultText");
+      const higherBtn = document.querySelector("#higherBtn");
+      const lowerBtn = document.querySelector("#lowerBtn");
+      const passBtn = document.querySelector("#passBtn");
+      const deckCount = document.querySelector("#deckCount");
+
+      let players = [];
+      let drinkCounts = [];
+      let clearedCups = [];
+      let currentPlayerIndex = 0;
+      let slots = [];
+      let drawPile = [];
+      let selectedIndex = null;
+      let gameStarted = false;
+      const bombCard = {
+        label: "炸弹",
+        value: null,
+        suit: "💣",
+        red: false,
+        bomb: true,
+      };
+
+      function createStandardDeck() {
+        return suits.flatMap((suit) =>
+          ranks.map((rank) => ({
+            label: rank.label,
+            value: rank.value,
+            suit: suit.mark,
+            red: suit.red,
+          })),
+        );
+      }
+
+      function shuffle(cards) {
+        const shuffled = [...cards];
+        for (let index = shuffled.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+        }
+        return shuffled;
+      }
+
+      function drawCard() {
+        return drawPile.pop() || null;
+      }
+
+      function dealBoard() {
+        const standardDeck = shuffle(createStandardDeck());
+        slots = Array.from({ length: 9 }, () => ({
+          topCard: standardDeck.pop(),
+          pileCount: 1,
+        }));
+        drawPile = shuffle([...standardDeck, bombCard]);
+        selectedIndex = null;
+        renderDeckStatus();
+        renderGrid();
+      }
+
+      function renderDeckStatus() {
+        const normalRemaining = drawPile.filter((card) => !card.bomb).length;
+        const totalRemaining = drawPile.length;
+        const bombText = drawPile.some((card) => card.bomb) ? "炸弹未出" : "炸弹已出";
+        deckCount.textContent = `剩余牌 ${totalRemaining}/53 · 普通牌 ${normalRemaining} · ${bombText}`;
+      }
+
+      function renderGrid() {
+        cardGrid.innerHTML = "";
+
+        slots.forEach((slot, index) => {
+          const button = document.createElement("button");
+          button.className = `slot${selectedIndex === index ? " selected" : ""}`;
+          button.type = "button";
+          button.disabled = !gameStarted;
+          button.setAttribute("aria-label", `第 ${index + 1} 格，当前牌 ${slot.topCard.label}${slot.topCard.suit}`);
+          button.addEventListener("click", () => selectSlot(index));
+          button.innerHTML = getCardHtml(slot.topCard, slot.pileCount);
+          cardGrid.appendChild(button);
+        });
+      }
+
+      function getCardHtml(card, pileCount) {
+        if (card.bomb) {
+          return `
+            <div class="card bomb-card" aria-label="炸弹卡">
+              <span class="bomb-icon"></span>
+            </div>
+            <span class="pile">${pileCount}</span>
+          `;
+        }
+
+        return `
+          <div class="card ${card.red ? "red" : ""}">
+            <span class="rank">${card.label}</span>
+            <span class="card-suit">${card.suit}</span>
+          </div>
+          <span class="pile">${pileCount}</span>
+        `;
+      }
+
+      function renderPlayers() {
+        playerList.innerHTML = "";
+
+        if (players.length === 0) {
+          const empty = document.createElement("span");
+          empty.className = "empty-player";
+          empty.textContent = "还没有玩家";
+          playerList.appendChild(empty);
+          return;
+        }
+
+        players.forEach((player, index) => {
+          const chip = document.createElement("div");
+          chip.className = `player-chip${gameStarted && index === currentPlayerIndex ? " current" : ""}`;
+
+          const name = document.createElement("span");
+          name.className = "player-name";
+          name.textContent = player;
+
+          const drinkCount = document.createElement("span");
+          drinkCount.className = "drink-count";
+          drinkCount.innerHTML = formatDrinkCount(drinkCounts[index] || 0, clearedCups[index] || 0);
+
+          const removeButton = document.createElement("button");
+          removeButton.className = "remove-player";
+          removeButton.type = "button";
+          removeButton.textContent = "×";
+          removeButton.setAttribute("aria-label", `移除 ${player}`);
+          removeButton.addEventListener("click", () => removePlayer(index));
+
+          chip.append(name, drinkCount, removeButton);
+          playerList.appendChild(chip);
+        });
+      }
+
+      function selectSlot(index) {
+        if (!gameStarted) return;
+
+        selectedIndex = index;
+        const card = slots[index].topCard;
+        selectedInfoEl.textContent = `${index + 1} 号格：${card.label}${card.suit}`;
+        higherBtn.disabled = false;
+        lowerBtn.disabled = false;
+        renderGrid();
+      }
+
+      function updateTurn() {
+        currentPlayerEl.textContent = gameStarted ? players[currentPlayerIndex] : "未开始";
+        statusText.textContent = gameStarted
+          ? `${players[currentPlayerIndex]} 选择一格，再猜下一张牌是大还是小。`
+          : "先添加玩家，然后开始游戏。";
+        renderPlayers();
+      }
+
+      function formatDrinkCount(remainingSips, cupsCleared) {
+        const mlCleared = cupsCleared * 325;
+        const cupHtml = Array.from({ length: cupsCleared }, () => `<span class="cup" title="已清 325ml"></span>`).join("");
+        const sipHtml = Array.from({ length: remainingSips }, () => `<span class="sip" title="1口"></span>`).join("");
+        const visual = cupHtml || sipHtml ? `<span class="drink-cups">${cupHtml}${sipHtml}</span>` : "";
+        return `${visual}<span>已清 ${cupsCleared}杯 / 待 ${remainingSips}口 / ${mlCleared}ml</span>`;
+      }
+
+      function nextPlayer() {
+        if (players.length === 0) return;
+
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        selectedIndex = null;
+        selectedInfoEl.textContent = "请选择一格";
+        higherBtn.disabled = true;
+        lowerBtn.disabled = true;
+        passBtn.disabled = true;
+        resultText.className = "result";
+        resultText.textContent = "轮到下一位。请选择一格，然后猜大或小。";
+        updateTurn();
+        renderGrid();
+      }
+
+      function makeGuess(direction) {
+        if (selectedIndex === null || !gameStarted) return;
+
+        const slot = slots[selectedIndex];
+        const oldCard = slot.topCard;
+        const oldPileCount = slot.pileCount;
+        const newCard = drawCard();
+        if (!newCard) {
+          resultText.className = "result miss";
+          resultText.textContent = "牌堆已经抽完了，请重新开局。";
+          selectedIndex = null;
+          selectedInfoEl.textContent = "请选择一格";
+          higherBtn.disabled = true;
+          lowerBtn.disabled = true;
+          passBtn.disabled = true;
+          renderDeckStatus();
+          renderGrid();
+          return;
+        }
+
+        if (newCard.bomb) {
+          const bombPenalty = oldPileCount * 2;
+          const totalSips = (drinkCounts[currentPlayerIndex] || 0) + bombPenalty;
+          const cupsToClear = Math.floor(totalSips / 5);
+          const replacementCard = drawCard();
+          drinkCounts[currentPlayerIndex] = totalSips % 5;
+          clearedCups[currentPlayerIndex] = (clearedCups[currentPlayerIndex] || 0) + cupsToClear;
+          slot.topCard = bombCard;
+          slot.pileCount = 1;
+          resultText.className = "result miss";
+          resultText.textContent = cupsToClear > 0
+            ? `抽到炸弹！${players[currentPlayerIndex]} 双倍加 ${bombPenalty} 口，满 5 口必须清 ${cupsToClear} 杯，剩 ${drinkCounts[currentPlayerIndex]} 口。猜输的人继续。`
+            : `抽到炸弹！${players[currentPlayerIndex]} 双倍加 ${bombPenalty} 口，目前待清 ${drinkCounts[currentPlayerIndex]} 口。猜输的人继续。`;
+          selectedIndex = null;
+          selectedInfoEl.textContent = "请选择一格";
+          higherBtn.disabled = true;
+          lowerBtn.disabled = true;
+          passBtn.disabled = true;
+          renderPlayers();
+          renderDeckStatus();
+          renderGrid();
+          window.setTimeout(() => {
+            slot.topCard = replacementCard || oldCard;
+            renderDeckStatus();
+            renderGrid();
+          }, 1200);
+          return;
+        }
+
+        const isHit = direction === "higher" ? newCard.value > oldCard.value : newCard.value < oldCard.value;
+        const guessedText = direction === "higher" ? "大" : "小";
+
+        slot.topCard = newCard;
+
+        if (isHit) {
+          slot.pileCount += 1;
+          resultText.className = "result hit";
+          resultText.textContent = `猜中了！${oldCard.label}${oldCard.suit} 后面是 ${newCard.label}${newCard.suit}，确实更${guessedText}。可以继续选格，或 Pass。`;
+          passBtn.disabled = false;
+        } else {
+          const totalSips = (drinkCounts[currentPlayerIndex] || 0) + oldPileCount;
+          const cupsToClear = Math.floor(totalSips / 5);
+          drinkCounts[currentPlayerIndex] = totalSips % 5;
+          clearedCups[currentPlayerIndex] = (clearedCups[currentPlayerIndex] || 0) + cupsToClear;
+          resultText.className = "result miss";
+          resultText.textContent = cupsToClear > 0
+            ? `猜错了！${oldCard.label}${oldCard.suit} 后面是 ${newCard.label}${newCard.suit}。${players[currentPlayerIndex]} 加 ${oldPileCount} 口，满 5 口必须清 ${cupsToClear} 杯，剩 ${drinkCounts[currentPlayerIndex]} 口。猜输的人继续。`
+            : `猜错了！${oldCard.label}${oldCard.suit} 后面是 ${newCard.label}${newCard.suit}。${players[currentPlayerIndex]} 加 ${oldPileCount} 口，目前待清 ${drinkCounts[currentPlayerIndex]} 口。猜输的人继续。`;
+          slot.pileCount = 1;
+          renderPlayers();
+          passBtn.disabled = true;
+        }
+
+        selectedIndex = null;
+        selectedInfoEl.textContent = "请选择一格";
+        higherBtn.disabled = true;
+        lowerBtn.disabled = true;
+        renderDeckStatus();
+        renderGrid();
+      }
+
+      function parsePlayers(raw) {
+        return raw
+          .split(/[,，\n]/)
+          .map((name) => name.trim())
+          .filter(Boolean);
+      }
+
+      function addPlayersFromInput() {
+        const names = parsePlayers(playerInput.value);
+        if (names.length === 0) {
+          playerInput.focus();
+          return;
+        }
+
+        names.forEach((name) => {
+          if (!players.includes(name)) {
+            players.push(name);
+            drinkCounts.push(0);
+            clearedCups.push(0);
+          }
+        });
+
+        playerInput.value = "";
+        resultText.className = "result";
+        resultText.textContent = `已添加 ${players.length} 位玩家。`;
+        updateTurn();
+      }
+
+      function removePlayer(index) {
+        players.splice(index, 1);
+        drinkCounts.splice(index, 1);
+        clearedCups.splice(index, 1);
+
+        if (players.length === 0) {
+          gameStarted = false;
+          currentPlayerIndex = 0;
+          selectedIndex = null;
+          higherBtn.disabled = true;
+          lowerBtn.disabled = true;
+          passBtn.disabled = true;
+          selectedInfoEl.textContent = "请选择一格";
+          resultText.className = "result";
+          resultText.textContent = "玩家已清空，先添加玩家再开始。";
+        } else if (currentPlayerIndex >= players.length) {
+          currentPlayerIndex = 0;
+        }
+
+        updateTurn();
+        renderGrid();
+      }
+
+      function startGame() {
+        addPlayersFromInput();
+        if (players.length === 0) {
+          resultText.className = "result miss";
+          resultText.textContent = "先添加至少一位玩家。";
+          playerInput.focus();
+          return;
+        }
+
+        currentPlayerIndex = 0;
+        gameStarted = true;
+        dealBoard();
+        updateTurn();
+        selectedInfoEl.textContent = "请选择一格";
+        resultText.className = "result";
+        resultText.textContent = "游戏开始。牌堆共 53 张：52 张普通牌加 1 张炸弹；炸弹抽到直接双倍，满 5 口必须清一杯 325ml，输的人继续。";
+      }
+
+      function resetGame() {
+        gameStarted = players.length > 0;
+        currentPlayerIndex = 0;
+        dealBoard();
+        updateTurn();
+        selectedInfoEl.textContent = "请选择一格";
+        higherBtn.disabled = true;
+        lowerBtn.disabled = true;
+        passBtn.disabled = true;
+        resultText.className = "result";
+        resultText.textContent = players.length > 0
+          ? "新一局开始。牌堆已重洗，口数记录已保留。"
+          : "猜中可以继续玩，也可以 Pass 交给下一位。";
+      }
+
+      function clearScores() {
+        drinkCounts = drinkCounts.map(() => 0);
+        clearedCups = clearedCups.map(() => 0);
+        resultText.className = "result";
+        resultText.textContent = "口数和清杯记录已清空。";
+        renderPlayers();
+      }
+
+      addPlayerBtn.addEventListener("click", addPlayersFromInput);
+      startBtn.addEventListener("click", startGame);
+      newGameBtn.addEventListener("click", resetGame);
+      clearScoresBtn.addEventListener("click", clearScores);
+      higherBtn.addEventListener("click", () => makeGuess("higher"));
+      lowerBtn.addEventListener("click", () => makeGuess("lower"));
+      passBtn.addEventListener("click", nextPlayer);
+      playerInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") addPlayersFromInput();
+      });
+
+      dealBoard();
+      updateTurn();
+    </script>
+  </body>
+</html>
